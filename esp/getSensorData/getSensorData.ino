@@ -97,7 +97,7 @@ void setup() {
   if (!mpu.begin()) {
     Serial.println("Sensor init failed");
     display.display();
-    while (1)
+    while (!mpu.begin())
       yield();
   }
   delay(1000);
