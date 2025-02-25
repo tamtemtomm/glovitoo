@@ -1,0 +1,76 @@
+import torch
+import numpy as np
+from models.RNNModel import SIBIRNNModel
+from tools import apply_threshold, read_config, output_audio
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+RNN_WEIGHTS = "./models/SIBIRNN-22-02-2.pth"
+
+class RNNPipeline:
+    def __init__(self, 
+                 model_path=RNN_WEIGHTS, 
+                 config_path='default', 
+                 seq_len=20,
+                 counter_limit = 30
+                 ):
+        self.model = SIBIRNNModel(20, 20, 3, 26).to(device)
+        self.model.load_state_dict(torch.load(model_path, weights_only=True, map_location='cpu'))
+        
+        self.thresholds = read_config(config_path=config_path)
+        self.seq_len = seq_len
+        self.counter_limit = counter_limit
+        self.cur_data = []
+        
+        self.counter = 0
+        self.prediction = ''
+        self.prev_prediction = ''
+        
+    def predict(self, data_torch):
+        out = self.model(data_torch)
+        prediction = chr(torch.argmax(out).item() + 97)
+        return prediction
+
+    def save_data(self):
+        pass
+
+    def output_audio(self, prediction):
+        output_audio(prediction)
+    
+    def str_to_torch(self):
+        data = self.cur_data[-self.seq_len:]
+        
+        data_np = []
+        for i, data in enumerate(data):
+            d = data.split(',')
+            flex_data = [round(apply_threshold(float(d[i]), 2500, 4000), 2) for i in range(5)]
+            d = flex_data + d[8:-1] + [d[-1].strip()]  
+            d = [float(x) for x in d]
+            
+            for i in range(5, 8):
+                d[i] = round(d[i]/20, 2)
+                
+            data_np.append(d)
+        # print(data)
+        data_np = np.array(data_np)
+        data_np = data_np.reshape((1, 11, 20))
+        data_torch = torch.from_numpy(data_np).float()
+        return data_torch
+    
+    def __call__(self, data):
+        self.cur_data.append(data)
+        if len(self.cur_data) >= self.seq_len :
+            data_torch = self.str_to_torch()
+            self.prediction = self.predict(data_torch)
+        
+        if self.counter >= self.counter_limit:
+            self.output_audio(self.prediction)
+            self.counter = 0
+        else : 
+            if self.prediction == self.prev_prediction : 
+                self.counter += 1
+            else : 
+                self.prev_prediction = self.prediction
+                self.counter = 0
+        
+        print(f"Current Prediction : {self.prediction}")
+        print(f'Current Counter : {self.counter}/{self.counter_limit}')

@@ -7,20 +7,18 @@ from mqtt import get_client, subscribe
 import os
 import time
 from datetime import datetime
+from RNN import RNNPipeline
+from get_data import GetDataPipeline
+
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 current_time = datetime.now()
 start_time = time.time()
 
-model = SIBIRNNModel(20, 20, 3, 26).to(device)
-prediction = ''
-prev_prediction = ''
-counter = 0
-counter_limit = 30
+rnn_pipeline = RNNPipeline()
+get_data_pipeline = GetDataPipeline()
 
 config_finger_counter = 0
 config_time_counter = 0
-config_mode = 'min'
-
 
 def loop_default(client, userdata, msg, config_path:str="default"):
     data = msg.payload.decode()
@@ -58,54 +56,20 @@ def get_config(client, userdata, msg, config_path:str='default', time_sleep=5):
         start_time = time.time()
 
 def get_data(client, userdata, msg, letter:str='a', name='default', id=1, time_get_data=3):
-    global config_mode, start_time  
+    global start_time  
 
     execution_time = time.time() - start_time
     data = msg.payload.decode()
-    data = convert_data_str_int(data)
-
-    os.makedirs(os.path.join('data', name, letter), exist_ok=True)
-
-    save_data(data, filepath=os.path.join(
-        'data', name, letter, f'{letter}-{id}.txt'))
-    print(f'{execution_time} : {data}')
-
+    
+    data = get_data_pipeline(data, letter, name, id)
+    
+    print(f'{round(execution_time, 2)} : {data}')
     if execution_time >= time_get_data :
         exit()
 
 def predict(client, userdata, msg, seq_len=20, config_path:str="default"):
-    global counter, prediction, prev_prediction  # Declare these variables as global
-    
     data = msg.payload.decode()
-    thresholds = read_config(config_path=config_path)
-    data = convert_data_str_int(data, thresholds=thresholds)
-    print(data)
-
-    save_data(data, filepath=f'predict-{current_time}.txt')
-
-    data_from_txt = read_data(filepath=f'predict-{current_time}.txt')
-    current_len_data = len(data_from_txt)
-    print(f'LAST{len(data_from_txt[-1].split(", "))}')
-    if current_len_data >= 20 and len(data_from_txt[-1].split(', ')) == 11:
-        data_torch = convert_data_str_torch(
-            data_from_txt, threshold=False, seq_len=seq_len, id=current_len_data-seq_len)
-        print(data_torch.shape)
-        out = model(data_torch)
-        prediction = chr(torch.argmax(out).item() + 97)
-        print(prediction)
-    
-    if counter >= counter_limit:
-        output_audio(prediction)
-        counter = 0
-    else : 
-        if prediction == prev_prediction : 
-            counter += 1
-        else : 
-            prev_prediction = prediction
-            counter = 0
-            
-    print(f'Current Counter : {counter}/{counter_limit}')
-    
+    rnn_pipeline(data)
 
 if __name__ == '__main__':
     # Setup argument parsing
