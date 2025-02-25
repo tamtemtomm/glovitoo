@@ -20,6 +20,8 @@ get_data_pipeline = GetDataPipeline()
 config_finger_counter = 0
 config_time_counter = 0
 
+cur_pred = ''
+
 def loop_default(client, userdata, msg, config_path:str="default"):
     data = msg.payload.decode()
     #print(data)
@@ -67,9 +69,22 @@ def get_data(client, userdata, msg, letter:str='a', name='default', id=1, time_g
     if execution_time >= time_get_data :
         exit()
 
-def predict(client, userdata, msg, seq_len=20, config_path:str="default"):
+def predict(client, userdata, msg, name=''):
+    global cur_pred
+    
     data = msg.payload.decode()
-    rnn_pipeline(data)
+    pred = rnn_pipeline(data)
+    
+    if name != '':
+        if len(cur_pred) >= 100:
+            print('Result recorded!')
+            exit()
+            
+        os.makedirs('result', exist_ok=True)
+        cur_pred += pred
+        if pred != '':
+            save_data(pred, filepath=os.path.join('result', f'{name}.txt'))
+        
 
 if __name__ == '__main__':
     # Setup argument parsing
@@ -105,7 +120,7 @@ if __name__ == '__main__':
     elif (args.fn =='predict'):
         print(f'Saving the data into predict-{current_time}.txt')
         subscribe(client, topic=TOPIC, loop=lambda client, userdata, message: predict(
-            client, userdata, message, seq_len=args.seq_len, config_path=args.config_path))
+            client, userdata, message, name=args.name))
     
     else:
         subscribe(client, topic=TOPIC, loop=lambda client, userdata, message: loop_default(

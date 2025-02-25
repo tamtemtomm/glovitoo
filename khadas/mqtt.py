@@ -1,13 +1,6 @@
 import random
 from paho.mqtt import client as mqtt_client
 
-BROKER = 'localhost'
-PORT = 1883
-TOPIC = "glovitoo/sensors"
-CLIENT_ID = f'subscribe-{random.randint(0, 100)}'
-USERNAME = 'gl_proto'
-PASSWORD = 'prototipe123'
-
 def get_client(client_id, username, password, broker, port) -> mqtt_client:
     def on_connect(client, userdata, flags, rc, properties=None):
         if rc == 0:
@@ -31,10 +24,17 @@ def subscribe(client: mqtt_client, topic, loop=on_message):
     client.subscribe(topic)
     client.on_message = loop
 
-def run():
-    client = get_client(client_id=CLIENT_ID, username=USERNAME, password=PASSWORD, broker=BROKER, port=PORT)
-    subscribe(client, topic=TOPIC)
-    client.loop_forever()
-
 if __name__ == '__main__':
-	run()
+    BROKER = 'localhost'
+    PORT = 1883
+    TOPIC = "glovitoo/sensors"
+    CLIENT_ID = f'subscribe-{random.randint(0, 100)}'
+    USERNAME = 'gl_proto'
+    PASSWORD = 'prototipe123'
+    
+    def run():
+        client = get_client(client_id=CLIENT_ID, username=USERNAME, password=PASSWORD, broker=BROKER, port=PORT)
+        subscribe(client, topic=TOPIC)
+        client.loop_forever()
+        
+    run()

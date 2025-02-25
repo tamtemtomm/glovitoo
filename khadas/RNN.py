@@ -1,10 +1,10 @@
 import torch
 import numpy as np
-from models.RNNModel import SIBIRNNModel
+from models.RNN.RNNModel import SIBIRNNModel
 from tools import apply_threshold, read_config, output_audio
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-RNN_WEIGHTS = "./models/SIBIRNN-22-02-2.pth"
+RNN_WEIGHTS = "./models/RNN/SIBIRNN-22-02-2.pth"
 
 class RNNPipeline:
     def __init__(self, 
@@ -74,3 +74,5 @@ class RNNPipeline:
         
         print(f"Current Prediction : {self.prediction}")
         print(f'Current Counter : {self.counter}/{self.counter_limit}')
+        
+        return self.prediction

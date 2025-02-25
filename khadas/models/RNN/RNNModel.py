@@ -1,5 +1,3 @@
-MODEL_PATH = './models/RNNBest.pth'
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -20,8 +18,6 @@ class SIBIRNNModel(nn.Module):
     self.flatten = nn.Flatten()
 
     self.fc = nn.Linear(11*hidden_size, output_size)
-    
-    self.load_state_dict(torch.load(MODEL_PATH, weights_only=True))
     self.eval()
 
   def forward(self, x):
